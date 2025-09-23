@@ -1,15 +1,33 @@
 {
-  "name": "ec-project",
+  "name": "puremeds_backend",
   "version": "1.0.0",
+  "description": "This is the backend for Puremeds, a comprehensive online pharmacy platform that offers a wide range of pharmaceutical products and healthcare services. The backend is built using Node.js and Express.js, providing a robust and scalable foundation for handling various functionalities such as user authentication, product management, order processing, and more.",
   "main": "index.js",
+  "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "nodemon src/index.js",
+    "start": "node src/index.js"
   },
-  "keywords": [],
-  "author": "",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/AbdulKarimBukhshAnsari/PureMeds_Backend.git"
+  },
+  "author": "Abdul Karim Bukhsh Ansari",
   "license": "ISC",
-  "description": "",
+  "bugs": {
+    "url": "https://github.com/AbdulKarimBukhshAnsari/PureMeds_Backend/issues"
+  },
+  "homepage": "https://github.com/AbdulKarimBukhshAnsari/PureMeds_Backend#readme",
+  "dependencies": {
+    "@clerk/express": "^1.7.33",
+    "cloudinary": "^2.7.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.2",
+    "express": "^5.1.0",
+    "mongoose": "^8.18.1",
+    "multer": "^2.0.2"
+  },
   "devDependencies": {
-    "prettier": "3.6.2"
+    "nodemon": "^3.1.10"
   }
 }
