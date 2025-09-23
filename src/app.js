@@ -40,6 +40,12 @@ app.get('/' , (req,res) => {
 
 // app.use('/api/v1/auth' , authRoutes) ;
 
+import adminRouter from "./routes/admin.route.js";
+import customerRouter from "./routes/customer.router.js";
+
+app.use('/api/v1/admin' , adminRouter) ;
+app.use('/api/v1/customer' , customerRouter);
+
 
 
 
