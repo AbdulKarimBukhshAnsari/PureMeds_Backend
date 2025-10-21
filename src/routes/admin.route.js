@@ -2,6 +2,10 @@ import { Router } from "express";
 import upload from "../middlewares/multer.middleware.js";
 // import function from controller here
 import { uploadProducts } from "../controllers/admin.controller.js";
+import { getProducts } from "../controllers/admin.controller.js";
+import { deleteProduct } from "../controllers/admin.controller.js";
+
+
 
 const adminRouter = Router();
 
@@ -11,6 +15,8 @@ adminRouter.post(
   upload.single("productImage"),
   uploadProducts
 );
-// example route
+
+adminRouter.get("/products", getProducts);
+adminRouter.delete("/products/:productId", deleteProduct);
 
 export default adminRouter;
