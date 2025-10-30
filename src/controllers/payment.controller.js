@@ -3,25 +3,27 @@ import dotenv from "dotenv";
 
 dotenv.config();
 
+//It's a fully featured Client object provided by Stripe sdk that the backend uses to talk to stripe api
+//stripe becomes an object that wraps every Stripe REST endpoint with convenient JavaScript methods.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// 🧾 Create Checkout Session (when user clicks “Pay Now”)
+// Create Checkout Session (when user clicks “Pay Now”)
 export const createCheckoutSession = async (req, res) => {
   try {
-    console.log("📦 Incoming request body:", req.body);
+    console.log("Incoming request body:", req.body);
 
     const { cartItems } = req.body;
 
     const lineItems = cartItems.map((item) => ({
       price_data: {
-        currency: "usd",
+        currency: "pkr",
         product_data: { name: item.name },
-        unit_amount: item.price * 100, // $ → cents
+        unit_amount: item.price,
       },
       quantity: item.quantity,
     }));
 
-    console.log("✅ Line items ready:", lineItems);
+    console.log("Line items ready:", lineItems);
 
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
@@ -31,16 +33,16 @@ export const createCheckoutSession = async (req, res) => {
       return_url: `${process.env.CLIENT_URL}/checkout/return?session_id={CHECKOUT_SESSION_ID}`,
     });
 
-    console.log("✅ Stripe session created:", session.id);
+    console.log("Stripe session created:", session.id);
 
     res.json({ clientSecret: session.client_secret });
   } catch (error) {
-    console.error("❌ Error creating checkout session:", error.message);
+    console.error("Error creating checkout session:", error.message);
     res.status(500).json({ message: "Failed to create checkout session" });
   }
 };
 
-// 🧾 Retrieve session status after checkout
+// Retrieve session status after checkout
 export const getSessionStatus = async (req, res) => {
   try {
     const { session_id } = req.query;
@@ -52,7 +54,7 @@ export const getSessionStatus = async (req, res) => {
       customerEmail: session.customer_details?.email,
     });
   } catch (error) {
-    console.error("❌ Error retrieving session:", error.message);
+    console.error("Error retrieving session:", error.message);
     res.status(500).json({ message: "Failed to get session status" });
   }
 };

@@ -6,10 +6,10 @@ import {
 
 const router = express.Router();
 
-// 🧾 Route to create a checkout session
+// Route to create a checkout session
 router.post("/create-checkout-session", createCheckoutSession);
 
-// 🧾 Route to get session status
+// Route to get session status
 router.get("/session-status", getSessionStatus);
 
 export default router;
