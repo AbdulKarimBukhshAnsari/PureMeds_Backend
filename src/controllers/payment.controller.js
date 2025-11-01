@@ -18,10 +18,20 @@ export const createCheckoutSession = async (req, res) => {
       price_data: {
         currency: "pkr",
         product_data: { name: item.name },
-        unit_amount: item.price,
+        unit_amount: item.price * 100,
       },
       quantity: item.quantity,
     }));
+
+    const shippingCost = 200;
+    lineItems.push({
+      price_data: {
+        currency: "pkr",
+        product_data: { name: "Shipping Fee" },
+        unit_amount: shippingCost * 100, // ₨200 → 20000 paisa
+      },
+      quantity: 1,
+    });
 
     console.log("Line items ready:", lineItems);
 
