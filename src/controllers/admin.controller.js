@@ -16,6 +16,8 @@ const uploadProducts = asyncHandler(async (req, res, next) => {
       sideEffects,
       category,
       availableStock,
+      batchId,
+      expiryDate
     } = req.body;
     
 
@@ -27,9 +29,30 @@ const uploadProducts = asyncHandler(async (req, res, next) => {
       !purpose ||
       !sideEffects ||
       !category ||
-      !availableStock
+      !availableStock ||
+      !batchId ||
+      !expiryDate
     )
       throw new ApiError(400, "Required fields missing!");
+
+    // Validate batch ID format
+    const batchIdRegex = /^PM-\d+$/;
+    if (!batchIdRegex.test(batchId)) {
+      throw new ApiError(400, "Invalid Batch ID format! Use PM-{number} (e.g., PM-12345)");
+    }
+
+    // Check if batch ID already exists
+    const existingBatch = await Product.findOne({ batchId });
+    if (existingBatch) {
+      throw new ApiError(400, "Batch ID already exists! Please use a unique Batch ID.");
+    }
+
+    // Validate expiry date is in the future
+    const expiryDateObj = new Date(expiryDate);
+    if (expiryDateObj <= new Date()) {
+      throw new ApiError(400, "Expiry date must be in the future!");
+    }
+
     const ProductImagePath = req?.file?.path;
     if (!ProductImagePath) throw new ApiError(400, "Image not found!");
     
@@ -49,6 +72,8 @@ const uploadProducts = asyncHandler(async (req, res, next) => {
       category,
       productImage: ProductImageUrl,
       availableStock,
+      batchId,
+      expiryDate: expiryDateObj
     };
 
     const newProduct = new Product(productData);

@@ -18,6 +18,7 @@ const uploadOnCloudinary = async (localFilePath) => {
         return response ; // we can get the response URL which we will save into our DataBase so that we can aceess it later on 
         
     } catch (error) {
+        console.error("Cloudinary Upload Error: ", error);
         fs.unlinkSync(localFilePath)
         return null ;
     
