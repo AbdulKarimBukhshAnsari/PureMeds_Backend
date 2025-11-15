@@ -39,6 +39,28 @@ const productSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  batchId: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true,
+    validate: {
+      validator: function(v) {
+        return /^PM-\d+$/.test(v);
+      },
+      message: props => `${props.value} is not a valid batch ID! Format should be PM-{number}`
+    }
+  },
+  expiryDate: {
+    type: Date,
+    required: true,
+    validate: {
+      validator: function(v) {
+        return v > new Date();
+      },
+      message: 'Expiry date must be in the future'
+    }
+  }
 } , { timestamps: true });
 
 const Product = mongoose.model("Product", productSchema);
