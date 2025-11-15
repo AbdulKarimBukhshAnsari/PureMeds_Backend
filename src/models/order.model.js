@@ -10,7 +10,7 @@ const orderSchema = new mongoose.Schema(
         // Generate orderId if not provided
         const timestamp = Date.now();
         const random = Math.floor(Math.random() * 10000);
-        return `ORD-${timestamp}-${random}`;
+        return `ORD-${random}`;
       },
     },
     userId: {
