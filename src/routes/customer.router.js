@@ -1,4 +1,5 @@
 import { Router } from "express";
+import upload from "../middlewares/multer.middleware.js";
 import { 
   getFeaturedProducts, 
   getProductsWithFilters, 
@@ -10,6 +11,12 @@ import {
   getOrderById,
   deleteOrder
 } from "../controllers/customer.controller.js";
+import {
+  createComplaint,
+  getComplaintsByUserId,
+  getComplaintById,
+  deleteComplaint,
+} from "../controllers/complaint.controller.js";
 
 const customerRouter = Router();
 
@@ -33,5 +40,15 @@ customerRouter.post("/orders", createOrder);
 customerRouter.get("/orders", getOrdersByUserId);
 customerRouter.get("/orders/:id", getOrderById);
 customerRouter.delete("/orders/:id", deleteOrder);
+
+// Complaint routes
+customerRouter.post(
+  "/complaints",
+  upload.single("qrCode"),
+  createComplaint
+);
+customerRouter.get("/complaints", getComplaintsByUserId);
+customerRouter.get("/complaints/:id", getComplaintById);
+customerRouter.delete("/complaints/:id", deleteComplaint);
 
 export default customerRouter;
