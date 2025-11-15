@@ -25,7 +25,7 @@ app.use(express.urlencoded({ extended: true, limit: "16kb" }));
 
 app.use(express.static("public"));
 
-app.use(clerkMiddleware({acceptsToken : "any"}));
+app.use(clerkMiddleware({acceptsToken: "any" }));
 
 // route for checking the server status
 app.get("/", (req, res) => {
