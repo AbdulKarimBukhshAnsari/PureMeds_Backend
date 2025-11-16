@@ -287,3 +287,66 @@ export const getBatchComplaintCount = asyncHandler(async (req, res, next) => {
   return res.status(200).json(response);
 });
 
+// Export complaints to CSV (Admin only)
+export const exportComplaintsCSV = asyncHandler(async (req, res, next) => {
+  const { status, city, store, batchId } = req.query;
+
+  // Build query
+  const query = {};
+
+  if (status && status.trim() !== "") {
+    query.status = status;
+  }
+
+  if (city && city.trim() !== "") {
+    query.city = { $regex: city, $options: "i" };
+  }
+
+  if (store && store.trim() !== "") {
+    query.store = { $regex: store, $options: "i" };
+  }
+
+  if (batchId && batchId.trim() !== "") {
+    query.batchId = { $regex: batchId, $options: "i" };
+  }
+
+  const complaints = await Complaint.find(query).sort({ createdAt: -1 });
+
+  // Generate CSV
+  const csvHeaders = [
+    "Complaint ID",
+    "User ID",
+    "Medicine Name",
+    "Dose",
+    "Manufacturer",
+    "Batch ID",
+    "Store",
+    "City",
+    "Status",
+    "Date Created"
+  ];
+
+  const csvRows = complaints.map(complaint => {
+    return [
+      complaint.complaintId || "",
+      complaint.userId || "",
+      complaint.medicineName || "",
+      complaint.medicineDose || "",
+      complaint.manufacturer || "",
+      complaint.batchId || "",
+      complaint.store || "",
+      complaint.city || "",
+      complaint.status || "",
+      complaint.createdAt ? new Date(complaint.createdAt).toISOString() : ""
+    ];
+  });
+
+  const csvContent = [
+    csvHeaders.join(","),
+    ...csvRows.map(row => row.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(","))
+  ].join("\n");
+
+  res.setHeader("Content-Type", "text/csv");
+  res.setHeader("Content-Disposition", `attachment; filename=complaints_${Date.now()}.csv`);
+  res.send(csvContent);
+});

@@ -10,7 +10,21 @@ import {
   getComplaintByIdAdmin,
   updateComplaintStatus,
   getBatchComplaintCount,
+  exportComplaintsCSV,
 } from "../controllers/complaint.controller.js";
+import {
+  getAllOrders,
+  getOrderByIdAdmin,
+  updateOrderStatus,
+  exportOrdersCSV,
+} from "../controllers/order.controller.js";
+import {
+  getDashboardOverview,
+  getMedicinesDashboard,
+  getOrdersDashboard,
+  getComplaintsDashboard,
+  getAlertsDashboard,
+} from "../controllers/dashboard.controller.js";
 
 const adminRouter = Router();
 
@@ -29,5 +43,19 @@ adminRouter.get("/complaints", getAllComplaints);
 adminRouter.get("/complaints/:id", getComplaintByIdAdmin);
 adminRouter.patch("/complaints/:id", updateComplaintStatus);
 adminRouter.get("/complaints/batch/count", getBatchComplaintCount);
+adminRouter.get("/complaints/export/csv", exportComplaintsCSV);
+
+// Order routes
+adminRouter.get("/orders", getAllOrders);
+adminRouter.get("/orders/:id", getOrderByIdAdmin);
+adminRouter.patch("/orders/:id", updateOrderStatus);
+adminRouter.get("/orders/export/csv", exportOrdersCSV);
+
+// Dashboard routes
+adminRouter.get("/dashboard/overview", getDashboardOverview);
+adminRouter.get("/dashboard/medicines", getMedicinesDashboard);
+adminRouter.get("/dashboard/orders", getOrdersDashboard);
+adminRouter.get("/dashboard/complaints", getComplaintsDashboard);
+adminRouter.get("/dashboard/alerts", getAlertsDashboard);
 
 export default adminRouter;
