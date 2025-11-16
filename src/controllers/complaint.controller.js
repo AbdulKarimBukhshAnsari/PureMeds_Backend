@@ -163,3 +163,127 @@ export const deleteComplaint = asyncHandler(async (req, res, next) => {
   return res.status(200).json(response);
 });
 
+
+// Get all complaints with filters (Admin only)
+export const getAllComplaints = asyncHandler(async (req, res, next) => {
+  const { status, city, store, batchId, page = 1, limit = 15 } = req.query;
+
+  const pageNum = parseInt(page);
+  const limitNum = parseInt(limit);
+  const skip = (pageNum - 1) * limitNum;
+
+  // Build query
+  const query = {};
+
+  if (status && status.trim() !== "") {
+    query.status = status;
+  }
+
+  if (city && city.trim() !== "") {
+    query.city = { $regex: city, $options: "i" };
+  }
+
+  if (store && store.trim() !== "") {
+    query.store = { $regex: store, $options: "i" };
+  }
+
+  if (batchId && batchId.trim() !== "") {
+    query.batchId = { $regex: batchId, $options: "i" };
+  }
+
+  // Execute query with pagination
+  const complaints = await Complaint.find(query)
+    .sort({ createdAt: -1 })
+    .skip(skip)
+    .limit(limitNum);
+
+  const totalComplaints = await Complaint.countDocuments(query);
+
+  const response = new ApiResponse(
+    {
+      complaints,
+      totalComplaints,
+      currentPage: pageNum,
+      totalPages: Math.ceil(totalComplaints / limitNum),
+    },
+    200,
+    "Complaints fetched successfully!"
+  );
+  return res.status(200).json(response);
+});
+
+// Get complaint by ID (Admin version - no user check)
+export const getComplaintByIdAdmin = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  if (!id || id.trim() === "") {
+    throw new ApiError(400, "Complaint ID is required!");
+  }
+
+  const complaint = await Complaint.findById(id);
+
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found!");
+  }
+
+  const response = new ApiResponse(
+    complaint,
+    200,
+    "Complaint fetched successfully!"
+  );
+  return res.status(200).json(response);
+});
+
+// Update complaint status and admin remarks (Admin only)
+export const updateComplaintStatus = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+  const { status, adminRemarks } = req.body;
+
+  if (!id || id.trim() === "") {
+    throw new ApiError(400, "Complaint ID is required!");
+  }
+
+  if (!status || !["Pending", "Reviewed", "Resolved", "Invalid"].includes(status)) {
+    throw new ApiError(400, "Valid status (Pending, Reviewed, Resolved, Invalid) is required!");
+  }
+
+  const complaint = await Complaint.findById(id);
+
+  if (!complaint) {
+    throw new ApiError(404, "Complaint not found!");
+  }
+
+  // Update status and remarks
+  complaint.status = status;
+  if (adminRemarks !== undefined) {
+    complaint.adminRemarks = adminRemarks;
+  }
+
+  await complaint.save();
+
+  const response = new ApiResponse(
+    complaint,
+    200,
+    "Complaint updated successfully!"
+  );
+  return res.status(200).json(response);
+});
+
+// Get batch complaint count (Admin only)
+export const getBatchComplaintCount = asyncHandler(async (req, res, next) => {
+  const { batchId } = req.query;
+
+  if (!batchId || batchId.trim() === "") {
+    throw new ApiError(400, "Batch ID is required!");
+  }
+
+  const count = await Complaint.countDocuments({ batchId });
+
+  const response = new ApiResponse(
+    { batchId, count },
+    200,
+    "Batch complaint count fetched successfully!"
+  );
+  return res.status(200).json(response);
+});
+
