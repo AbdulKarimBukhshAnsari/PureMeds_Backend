@@ -6,11 +6,13 @@ import {
   getProductsByCategory, 
   searchProductsByName,
   getProductById,
+} from "../controllers/medicine.controller.js";
+import {
   createOrder,
   getOrdersByUserId,
   getOrderById,
   deleteOrder
-} from "../controllers/customer.controller.js";
+} from "../controllers/order.controller.js";
 import {
   createComplaint,
   getComplaintsByUserId,
@@ -52,3 +54,4 @@ customerRouter.get("/complaints/:id", getComplaintById);
 customerRouter.delete("/complaints/:id", deleteComplaint);
 
 export default customerRouter;
+

@@ -1,12 +1,10 @@
 import Product from "../models/product.model.js";
-import Order from "../models/order.model.js";
-import Payment from "../models/payment.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getAuth } from "@clerk/express";
+import { uploadOnCloudinary } from "../utils/cloudinary.js";
 
-// Get all products (existing endpoint - kept for backward compatibility)
 export const getProducts = async (req, res, next) => {
   try {
     const { userId } = getAuth(req);
@@ -213,180 +211,136 @@ export const getProductById = asyncHandler(async (req, res, next) => {
   return res.status(200).json(response);
 });
 
-// Create Order
-export const createOrder = asyncHandler(async (req, res, next) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    throw new ApiError(401, "Unauthorized request!");
+
+// Upload Product (Admin only)
+export const uploadProducts = asyncHandler(async (req, res, next) => {
+  const {
+    productName,
+    chemicalName,
+    manufacturer,
+    price,
+    purpose,
+    sideEffects,
+    category,
+    availableStock,
+    batchId,
+    expiryDate
+  } = req.body;
+  
+
+  if (
+    !productName ||
+    !chemicalName ||
+    !manufacturer ||
+    !price ||
+    !purpose ||
+    !sideEffects ||
+    !category ||
+    !availableStock ||
+    !batchId ||
+    !expiryDate
+  )
+    throw new ApiError(400, "Required fields missing!");
+
+  // Validate batch ID format
+  const batchIdRegex = /^PM-\d+$/;
+  if (!batchIdRegex.test(batchId)) {
+    throw new ApiError(400, "Invalid Batch ID format! Use PM-{number} (e.g., PM-12345)");
   }
 
-  const { customerInfo, products, subtotal, shipping, totalAmount, paymentMethod } = req.body;
-
-  // Validate required fields
-  if (!customerInfo || !products || !Array.isArray(products) || products.length === 0) {
-    throw new ApiError(400, "Customer info and products are required!");
+  // Check if batch ID already exists
+  const existingBatch = await Product.findOne({ batchId });
+  if (existingBatch) {
+    throw new ApiError(400, "Batch ID already exists! Please use a unique Batch ID.");
   }
 
-  if (!subtotal || !totalAmount) {
-    throw new ApiError(400, "Subtotal and total amount are required!");
+  // Validate expiry date is in the future
+  const expiryDateObj = new Date(expiryDate);
+  if (expiryDateObj <= new Date()) {
+    throw new ApiError(400, "Expiry date must be in the future!");
   }
 
-  if (!paymentMethod || !["card", "cod"].includes(paymentMethod)) {
-    throw new ApiError(400, "Valid payment method (card or cod) is required!");
+  const ProductImagePath = req?.file?.path;
+  if (!ProductImagePath) throw new ApiError(400, "Image not found!");
+  
+
+  const uploadResult = await uploadOnCloudinary(ProductImagePath);
+  if (!uploadResult) throw new ApiError(500, "Image upload failed!");
+
+  const ProductImageUrl = uploadResult.url;
+
+  const productData = {
+    productName,
+    chemicalName,
+    manufacturer,
+    price,
+    purpose,
+    sideEffects,
+    category,
+    productImage: ProductImageUrl,
+    availableStock,
+    batchId,
+    expiryDate: expiryDateObj
+  };
+
+  const newProduct = new Product(productData);
+  await newProduct.save();
+
+  if(!(newProduct && newProduct._id)){
+    throw new ApiError(500, "Failed to save product!");
   }
-
-  // Validate customer info
-  const requiredCustomerFields = ["firstName", "lastName", "email", "phone", "address", "city", "state", "zip", "country"];
-  for (const field of requiredCustomerFields) {
-    if (!customerInfo[field]) {
-      throw new ApiError(400, `${field} is required in customer info!`);
-    }
-  }
-
-  // Validate and check product availability, then decrease stock
-  const orderProducts = [];
-  for (const item of products) {
-    if (!item.productId || !item.quantity || !item.price) {
-      throw new ApiError(400, "Each product must have productId, quantity, and price!");
-    }
-
-    const product = await Product.findById(item.productId);
-    if (!product) {
-      throw new ApiError(404, `Product with ID ${item.productId} not found!`);
-    }
-
-    if (product.availableStock < item.quantity) {
-      throw new ApiError(400, `Insufficient stock for ${product.productName}. Available: ${product.availableStock}, Requested: ${item.quantity}`);
-    }
-
-    // Decrease stock
-    product.availableStock -= item.quantity;
-    await product.save();
-
-    orderProducts.push({
-      productId: product._id,
-      productName: product.productName,
-      quantity: item.quantity,
-      price: item.price,
-    });
-  }
-
-  // Create order
-  const order = new Order({
-    userId,
-    customerInfo,
-    products: orderProducts,
-    subtotal,
-    shipping: shipping || 200,
-    totalAmount,
-    paymentMethod,
-    status: paymentMethod === "cod" ? "pending" : "confirmed",
-  });
-
-  await order.save();
 
   const response = new ApiResponse(
-    order,
-    201,
-    "Order created successfully!"
-  );
-  return res.status(201).json(response);
-});
-
-// Get orders by user ID
-export const getOrdersByUserId = asyncHandler(async (req, res, next) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    throw new ApiError(401, "Unauthorized request!");
-  }
-
-  const orders = await Order.find({ userId })
-    .populate("products.productId", "productName productImage price")
-    .sort({ createdAt: -1 });
-
-  const response = new ApiResponse(
-    orders,
+    newProduct,
     200,
-    "Orders fetched successfully!"
+    "Product uploaded successfully!"
   );
   return res.status(200).json(response);
 });
 
-// Get order by ID
-export const getOrderById = asyncHandler(async (req, res, next) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    throw new ApiError(401, "Unauthorized request!");
+// Get products with filters (Admin version with pagination)
+export const getProductsAdmin = asyncHandler(async (req, res, next) => {
+  const {page , category , search } = req.query;
+  const pageSize = 10;
+
+  // if the category is provided, filter by category
+  const query = {};
+  if (category) {
+      query.category = category;
+  }
+  if (search) {
+      query.productName = { $regex: search, $options: "i" };
   }
 
-  const { id } = req.params;
+  const products = await Product.find(query)
+      .skip((page - 1) * pageSize)
+      .limit(pageSize);
 
-  if (!id || id.trim() === "") {
-    throw new ApiError(400, "Order ID is required!");
-  }
+  const ProductCount = await Product.countDocuments(query);
 
-  const order = await Order.findById(id).populate("products.productId", "productName productImage price manufacturer");
-
-  if (!order) {
-    throw new ApiError(404, "Order not found!");
-  }
-
-  // Check if order belongs to the user
-  if (order.userId !== userId) {
-    throw new ApiError(403, "You don't have permission to view this order!");
-  }
 
   const response = new ApiResponse(
-    order,
-    200,
-    "Order fetched successfully!"
+      { products, totalProducts: ProductCount },
+      200,
+      "Products retrieved successfully!"
   );
   return res.status(200).json(response);
 });
 
-// Delete order (cascade delete payment)
-export const deleteOrder = asyncHandler(async (req, res, next) => {
-  const { userId } = getAuth(req);
-  if (!userId) {
-    throw new ApiError(401, "Unauthorized request!");
+// Delete Product (Admin only)
+export const deleteProduct = asyncHandler(async (req, res, next) => {
+  const { productId } = req.params;
+  const deletedProduct = await Product.findByIdAndDelete(productId);
+
+  if (!deletedProduct) {
+      throw new ApiError(404, "Product not found!");
   }
-
-  const { id } = req.params;
-
-  if (!id || id.trim() === "") {
-    throw new ApiError(400, "Order ID is required!");
-  }
-
-  const order = await Order.findById(id);
-
-  if (!order) {
-    throw new ApiError(404, "Order not found!");
-  }
-
-  // Check if order belongs to the user
-  if (order.userId !== userId) {
-    throw new ApiError(403, "You don't have permission to delete this order!");
-  }
-
-  // Delete associated payment
-  await Payment.deleteOne({ orderId: order._id });
-
-  // Restore product stock
-  for (const item of order.products) {
-    const product = await Product.findById(item.productId);
-    if (product) {
-      product.availableStock += item.quantity;
-      await product.save();
-    }
-  }
-
-  // Delete order
-  await Order.findByIdAndDelete(id);
 
   const response = new ApiResponse(
-    null,
-    200,
-    "Order deleted successfully!"
+      deletedProduct,
+      200,
+      "Product deleted successfully!"
   );
   return res.status(200).json(response);
 });
+
