@@ -13,21 +13,30 @@ dotenv.config();
 //stripe becomes an object that wraps every Stripe REST endpoint with convenient JavaScript methods.
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
-// Create Checkout Session (when user clicks “Pay Now”)
-export const createCheckoutSession = async (req, res) => {
+// Create Checkout Session (when user clicks "Pay Now")
+export const createCheckoutSession = asyncHandler(async (req, res, next) => {
   try {
     console.log("Incoming request body:", req.body);
 
     const { cartItems } = req.body;
 
-    const lineItems = cartItems.map((item) => ({
-      price_data: {
-        currency: "pkr",
-        product_data: { name: item.name },
-        unit_amount: item.price * 100,
-      },
-      quantity: item.quantity,
-    }));
+    if (!cartItems || !Array.isArray(cartItems) || cartItems.length === 0) {
+      throw new ApiError(400, "Cart items are required!");
+    }
+
+    const lineItems = cartItems.map((item) => {
+      if (!item.name || !item.price || !item.quantity) {
+        throw new ApiError(400, "Each cart item must have name, price, and quantity!");
+      }
+      return {
+        price_data: {
+          currency: "pkr",
+          product_data: { name: item.name },
+          unit_amount: Math.round(item.price * 100), // Convert to paisa
+        },
+        quantity: item.quantity,
+      };
+    });
 
     const shippingCost = 200;
     lineItems.push({
@@ -60,12 +69,20 @@ export const createCheckoutSession = async (req, res) => {
 
     console.log("Stripe session created:", session.id);
 
-    res.json({ clientSecret: session.client_secret });
+    const response = new ApiResponse(
+      { clientSecret: session.client_secret },
+      200,
+      "Checkout session created successfully!"
+    );
+    return res.status(200).json(response);
   } catch (error) {
-    console.error("Error creating checkout session:", error.message);
-    res.status(500).json({ message: "Failed to create checkout session" });
+    console.error("Error creating checkout session:", error);
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    throw new ApiError(500, error.message || "Failed to create checkout session");
   }
-};
+});
 
 // Retrieve session status after checkout
 export const getSessionStatus = asyncHandler(async (req, res, next) => {

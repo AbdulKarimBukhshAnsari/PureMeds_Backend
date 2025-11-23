@@ -23,6 +23,9 @@ import {
   verifyMedicineByQRCode,
   verifyMedicineByHash,
 } from "../controllers/verification.controller.js";
+import {
+  getSupplyChainByBatchId,
+} from "../controllers/supplyChain.controller.js";
 
 const customerRouter = Router();
 
@@ -64,6 +67,9 @@ customerRouter.post(
   verifyMedicineByQRCode
 );
 customerRouter.post("/verify/hash", verifyMedicineByHash);
+
+// Supply Chain routes
+customerRouter.get("/supply-chain/batch/:batchId", getSupplyChainByBatchId);
 
 export default customerRouter;
 

@@ -1,4 +1,5 @@
 import Product from "../models/product.model.js";
+import SupplyChain from "../models/supplyChain.model.js";
 import ApiError from "../utils/ApiError.js";
 import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
@@ -331,6 +332,46 @@ export const uploadProducts = asyncHandler(async (req, res, next) => {
 
   if(!(newProduct && newProduct._id)){
     throw new ApiError(500, "Failed to save product!");
+  }
+
+  // Auto-create supply chain data
+  try {
+    const supplyChainData = {
+      batchId: batchId,
+      manufacturerName: manufacturer,
+      expiryDate: expiryDateObj,
+      stockRemaining: availableStock,
+      details: {
+        "raw-material": {
+          verified: true,
+          name: "ABC",
+        },
+        Manufacturer: {
+          verified: true,
+          name: manufacturer,
+        },
+        "Quality-testing": {
+          verified: true,
+          name: "ABV",
+        },
+        Platform: {
+          verified: true,
+          name: "PureMeds",
+        },
+        Customers: {
+          verified: false,
+          name: "",
+        },
+      },
+    };
+
+    const newSupplyChain = new SupplyChain(supplyChainData);
+    await newSupplyChain.save();
+    console.log("Supply chain created for batch:", batchId);
+  } catch (supplyChainError) {
+    console.error("Error creating supply chain:", supplyChainError);
+    // Don't fail the product creation if supply chain creation fails
+    // But log it for debugging
   }
 
   const response = new ApiResponse(

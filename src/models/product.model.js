@@ -73,6 +73,23 @@ const productSchema = new mongoose.Schema({
   }
 } , { timestamps: true });
 
+// Cascade delete: Remove associated supply chain when product is deleted
+productSchema.pre('findOneAndDelete', async function() {
+  const product = await this.model.findOne(this.getQuery());
+  if (product && product.batchId) {
+    const SupplyChain = mongoose.model('SupplyChain');
+    await SupplyChain.deleteOne({ batchId: product.batchId });
+  }
+});
+
+productSchema.pre('deleteOne', async function() {
+  const product = await this.model.findOne(this.getQuery());
+  if (product && product.batchId) {
+    const SupplyChain = mongoose.model('SupplyChain');
+    await SupplyChain.deleteOne({ batchId: product.batchId });
+  }
+});
+
 const Product = mongoose.model("Product", productSchema);
 
 export default Product;
