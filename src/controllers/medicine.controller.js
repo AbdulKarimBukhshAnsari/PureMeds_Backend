@@ -4,6 +4,9 @@ import ApiResponse from "../utils/ApiResponse.js";
 import asyncHandler from "../utils/asyncHandler.js";
 import { getAuth } from "@clerk/express";
 import { uploadOnCloudinary } from "../utils/cloudinary.js";
+import { generateMedicineHash } from "../utils/hashGenerator.js";
+import { generateQRCode } from "../utils/qrCodeGenerator.js";
+import blockchainService from "../services/blockchain.service.js";
 
 export const getProducts = async (req, res, next) => {
   try {
@@ -264,10 +267,48 @@ export const uploadProducts = asyncHandler(async (req, res, next) => {
   if (!ProductImagePath) throw new ApiError(400, "Image not found!");
   
 
+  // Upload product image to Cloudinary
   const uploadResult = await uploadOnCloudinary(ProductImagePath);
   if (!uploadResult) throw new ApiError(500, "Image upload failed!");
 
   const ProductImageUrl = uploadResult.url;
+
+  // Generate hash from medicine data
+  const medicineHash = generateMedicineHash(
+    batchId,
+    manufacturer,
+    expiryDateObj,
+    productName
+  );
+
+  // Generate QR code from hash
+  let qrCodePath;
+  let qrCodeUrl;
+  try {
+    qrCodePath = await generateQRCode(medicineHash, batchId);
+    
+    // Upload QR code to Cloudinary
+    const qrCodeUploadResult = await uploadOnCloudinary(qrCodePath);
+    if (!qrCodeUploadResult) {
+      throw new ApiError(500, "QR code upload failed!");
+    }
+    qrCodeUrl = qrCodeUploadResult.url;
+  } catch (error) {
+    console.error("Error generating/uploading QR code:", error);
+    throw new ApiError(500, `Failed to generate QR code: ${error.message}`);
+  }
+
+  // Register hash on blockchain
+  let blockchainTx = null;
+  try {
+    blockchainTx = await blockchainService.registerMedicine(medicineHash, batchId);
+    console.log("Medicine registered on blockchain:", blockchainTx);
+  } catch (error) {
+    console.error("Blockchain registration error:", error);
+    // Continue even if blockchain registration fails (offline mode)
+    // In production, you might want to handle this differently
+    console.warn("Warning: Medicine saved to database but blockchain registration failed");
+  }
 
   const productData = {
     productName,
@@ -280,7 +321,9 @@ export const uploadProducts = asyncHandler(async (req, res, next) => {
     productImage: ProductImageUrl,
     availableStock,
     batchId,
-    expiryDate: expiryDateObj
+    expiryDate: expiryDateObj,
+    hash: medicineHash,
+    qrCode: qrCodeUrl
   };
 
   const newProduct = new Product(productData);
@@ -291,7 +334,10 @@ export const uploadProducts = asyncHandler(async (req, res, next) => {
   }
 
   const response = new ApiResponse(
-    newProduct,
+    {
+      ...newProduct.toObject(),
+      blockchainTx: blockchainTx
+    },
     200,
     "Product uploaded successfully!"
   );
