@@ -25,6 +25,10 @@ import {
   getComplaintsDashboard,
   getAlertsDashboard,
 } from "../controllers/dashboard.controller.js";
+import {
+  verifyMedicineByQRCode,
+  verifyMedicineByHash,
+} from "../controllers/verification.controller.js";
 
 const adminRouter = Router();
 
@@ -57,5 +61,13 @@ adminRouter.get("/dashboard/medicines", getMedicinesDashboard);
 adminRouter.get("/dashboard/orders", getOrdersDashboard);
 adminRouter.get("/dashboard/complaints", getComplaintsDashboard);
 adminRouter.get("/dashboard/alerts", getAlertsDashboard);
+
+// Medicine verification routes (admin can verify too)
+adminRouter.post(
+  "/verify/qrcode",
+  upload.single("qrCode"),
+  verifyMedicineByQRCode
+);
+adminRouter.post("/verify/hash", verifyMedicineByHash);
 
 export default adminRouter;

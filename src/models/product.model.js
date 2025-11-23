@@ -60,6 +60,16 @@ const productSchema = new mongoose.Schema({
       },
       message: 'Expiry date must be in the future'
     }
+  },
+  hash: {
+    type: String,
+    required: true,
+    unique: true,
+    index: true
+  },
+  qrCode: {
+    type: String,
+    required: true
   }
 } , { timestamps: true });
 

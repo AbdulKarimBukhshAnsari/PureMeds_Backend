@@ -19,6 +19,10 @@ import {
   getComplaintById,
   deleteComplaint,
 } from "../controllers/complaint.controller.js";
+import {
+  verifyMedicineByQRCode,
+  verifyMedicineByHash,
+} from "../controllers/verification.controller.js";
 
 const customerRouter = Router();
 
@@ -52,6 +56,14 @@ customerRouter.post(
 customerRouter.get("/complaints", getComplaintsByUserId);
 customerRouter.get("/complaints/:id", getComplaintById);
 customerRouter.delete("/complaints/:id", deleteComplaint);
+
+// Medicine verification routes
+customerRouter.post(
+  "/verify/qrcode",
+  upload.single("qrCode"),
+  verifyMedicineByQRCode
+);
+customerRouter.post("/verify/hash", verifyMedicineByHash);
 
 export default customerRouter;
 
