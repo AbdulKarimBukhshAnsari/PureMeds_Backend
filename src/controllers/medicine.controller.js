@@ -359,7 +359,7 @@ export const uploadProducts = asyncHandler(async (req, res, next) => {
           name: "PureMeds",
         },
         Customers: {
-          verified: false,
+          verified: true,
           name: "",
         },
       },
