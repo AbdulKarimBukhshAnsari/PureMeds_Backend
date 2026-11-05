@@ -1,6 +1,10 @@
 import dns from 'node:dns';
 
-dns.setServers(['8.8.8.8', '8.8.4.4']);
+// Forcing Google DNS breaks private AWS hostnames (DocumentDB, ECS Service Connect),
+// so only do it when explicitly asked (e.g. on a local network with SRV lookup issues)
+if (process.env.USE_PUBLIC_DNS === 'true') {
+  dns.setServers(['8.8.8.8', '8.8.4.4']);
+}
 
 import 'dotenv/config';
 import DB_Connection from './db/index.js';
